@@ -2,27 +2,48 @@
 
 namespace Mifesta\LogCleaner\Facades;
 
-use Mifesta\LogCleaner\Cleaner as _Cleaner;
+use Illuminate\Support\Facades\Facade;
+use Mifesta\LogCleaner\Cleaner as CleanerInstance;
 
 /**
- * Class Cleaner
- * @method static _Cleaner dir(string $dirname)
- * @method static _Cleaner rotate(string $dirname)
- * @method static boolean clear(string $dirname)
- *
- * @package Mifesta\LogCleaner\Facades
+ * @method static CleanerInstance dir(string|null $dirname)
+ * @method static CleanerInstance rotate(int|string|null $days)
+ * @method static bool clear()
  */
-class Cleaner
+class Cleaner extends Facade
 {
     /**
-     * Handle dynamic static method calls into the method.
+     * Instance used when the container binding is not registered.
      *
+     * @var CleanerInstance|null
+     */
+    private static $fallback;
+
+    /**
+     * @return string
+     */
+    protected static function getFacadeAccessor()
+    {
+        return 'mifesta.log-cleaner';
+    }
+
+    /**
      * @param string $method
      * @param array $parameters
      * @return mixed
      */
     public static function __callStatic($method, $parameters)
     {
-        return (new _Cleaner)->$method(...$parameters);
+        $application = static::getFacadeApplication();
+
+        if ($application && $application->bound(static::getFacadeAccessor())) {
+            return parent::__callStatic($method, $parameters);
+        }
+
+        if (!self::$fallback) {
+            self::$fallback = new CleanerInstance();
+        }
+
+        return self::$fallback->$method(...$parameters);
     }
 }

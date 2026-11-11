@@ -2,101 +2,90 @@
 
 [![Latest Stable Version](https://poser.pugx.org/mifesta/laravel-log-cleaner/v/stable)](https://packagist.org/packages/mifesta/laravel-log-cleaner)
 [![Total Downloads](https://poser.pugx.org/mifesta/laravel-log-cleaner/downloads)](https://packagist.org/packages/mifesta/laravel-log-cleaner)
-[![Latest Unstable Version](https://poser.pugx.org/mifesta/laravel-log-cleaner/v/unstable)](https://packagist.org/packages/mifesta/laravel-log-cleaner)
 [![License](https://poser.pugx.org/mifesta/laravel-log-cleaner/license)](https://packagist.org/packages/mifesta/laravel-log-cleaner)
 
-# Documentation
+Artisan command and facade that delete old Laravel log files.
 
-* [Installation](#installation)
-* [Usage](#usage)
-    - [Working with facade](#working-with-facade)
-    - [Working with Artisan CLI](#working-with-artisan-cli)
-* [License](#license)
-* [Thanks from author](#thanks-for-use)
+The package release matches the major Laravel version. `composer require` selects the newest release that fits the Laravel version already installed in the project.
+
+| Laravel | Package constraint | PHP |
+| --- | --- | --- |
+| 5.5 – 5.8 | `^5.5` | `>=7.0` |
+| 6 | `^6.0` | `^7.2` |
+| 7 | `^7.0` | `^7.2.5` |
+| 8 | `^8.0` | `^7.3\|^8.0` |
+| 9 | `^9.0` | `^8.0` |
+| 10 | `^10.0` | `^8.1` |
+| 11 | `^11.0` | `^8.2` |
+| 12 | `^12.0` | `^8.2` |
+| 13 | `^13.0` | `^8.3` |
+
+Release 1.0.1 remains available for existing `1.*` constraints. It does not include these fixes.
 
 ## Installation
-You can install this package through [Composer](https://getcomposer.org).
 
-- First, edit your project's `composer.json` file to require `mifesta/laravel-log-cleaner`:
-```php
-"require": {
-    // other require packages
-    "mifesta/laravel-log-cleaner": "1.*"
-},
-```
-- Next, run the composer update command in your command line interface:
 ```shell
-$ composer update
+composer require mifesta/laravel-log-cleaner
 ```
-> **Note:** Instead of performing the above two steps, you can perform faster with the command line `$ composer require mifesta/laravel-log-cleaner:1.*`.
-- Add following code to app\Console\Kernel.php.
-```php
-protected $commands = [
-    // other kernel commands
-    \Mifesta\LogCleaner\Command\LogClearCommand::class,
-];
-```
+
+Laravel 5.5 and newer discover the service provider and the `log:clear` command. No edit to `app/Console/Kernel.php` is required.
 
 ## Usage
 
-#### Working with facade
-Laravel Log Cleaner has a facade with name is `Mifesta\LogCleaner\Facades\Cleaner`. You can do any operation through this facade. For example:
+Delete every `*.log` file in `storage/logs`:
+
+```shell
+php artisan log:clear
+```
+
+Keep entries from the last 14 days. A file dated exactly 14 days ago is kept; older files are deleted.
+
+```shell
+php artisan log:clear --rotate=14
+```
+
+Clean another directory, or pass a log file to clean the directory that contains it:
+
+```shell
+php artisan log:clear --path=/path/to/logs --rotate=14
+php artisan log:clear -P /path/to/logs/laravel.log -R 14
+```
+
+The same operations are available through `Mifesta\LogCleaner\Facades\Cleaner`. Calls share one instance.
+
 ```php
-<?php
-
-namespace YourNamespace;
-
-// your code
-
 use Mifesta\LogCleaner\Facades\Cleaner;
 
-class YourClass
-{
-    public function yourMethod()
-    {
-        Cleaner::doSomething();
-    }
+Cleaner::rotate(14);
+
+if (Cleaner::dir(storage_path('logs'))->clear()) {
+    // Entries older than 14 days were removed.
 }
 ```
 
-#### Method chaining
-Some functions of loading, writing, backing up, restoring are implementation and usage of method chaining. So these functions can be called to chained together in a single statement. Examples:
-```php
-$cleaner = Cleaner::rotate(14);
+Inside `storage/logs` the cleaner handles:
 
-if ($cleaner->clear()) {
-    echo 'Log files older than 14 days in default folder were cleared successfully.';
-} else {
-    echo 'Log files older than 14 days in default folder were cleared with errors.';
-}
+- daily files `*-YYYY-MM-DD.log`, using the date in the file name
+- other `*.log` files, using `[YYYY-MM-DD HH:MM:SS]` headers or JSON lines with a `datetime` field
+- files without those dates, using the file modification time when `--rotate` is set
 
-if ($cleaner->dir('path_to_logs')->clear()) {
-    echo 'Log files older than 14 days in `path_to_logs` folder were cleared successfully.';
-} else {
-    echo 'Log files older than 14 days in `path_to_logs` folder were cleared with errors.';
-}
-```
-```php
-if (Cleaner::dir('path_to_logs')->clear()) {
-    echo 'Log files in `path_to_logs` folder were cleared successfully.';
-} else {
-    echo 'Log files in `path_to_logs` folder were cleared with errors.';
-}
-```
+Only the selected directory is scanned. Subdirectories, hidden files, and files that do not end in `.log` stay in place. Omitting `--rotate` deletes every `*.log` file in the directory. A missing path or a negative rotate value stops the command before anything is deleted.
 
-#### Working with Artisan CLI
-Laravel Log Cleaner have command can use easily with Artisan CLI. Example:
+## Tests
+
 ```shell
-$ php artisan log:clear --path=/path/to/log/files --rotate=14
+composer update
+composer test
 ```
 
-Please use each above command with option --help for details of usage. Example:
-```shell
-$ php artisan log:clear --help
-```
+## Credits
+
+- [Sergei Gruzdov](https://github.com/cardee2000)
+
+## Security
+
+Report security issues to [cardee@mifesta.com](mailto:cardee@mifesta.com).
 
 ## License
-The Laravel Log Cleaner is open-source software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
-## Thanks for use
-Hopefully, this package is useful to you.
+MIT. Copyright (c) 2019-2026 Sergei Gruzdov \<cardee@mifesta.com\>.
